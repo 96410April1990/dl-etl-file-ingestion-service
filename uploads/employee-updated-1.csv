@@ -1,0 +1,6 @@
+﻿empId,name,salary,department
+1,Rohith,100000,IT
+2,John,80000,Finance
+3,,90000,Sales
+1,Alice,100000,Marketing
+4,Bob,-100000,HR
