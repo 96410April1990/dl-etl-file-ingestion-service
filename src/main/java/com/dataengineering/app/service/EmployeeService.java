@@ -15,8 +15,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.dataengineering.app.repository.EmployeeFileRepository;
+import com.dataengineering.app.repository.EmployeeRawRepository;
+import com.dataengineering.app.repository.EmployeeErrorRepository;
+import com.dataengineering.app.entity.EmployeeError;
 import com.dataengineering.app.entity.EmployeeFile;
+import com.dataengineering.app.entity.EmployeeRaw;
 import com.dataengineering.app.entity.EmployeeRecord;
+import com.dataengineering.app.kafka.EmployeeEvent;
+import com.dataengineering.app.kafka.EmployeeProducer;
 import com.dataengineering.app.model.ValidationResult;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -28,10 +34,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class EmployeeService {
 
     private final EmployeeFileRepository repository;
+    private final EmployeeRawRepository rawRepository;
+    private final EmployeeErrorRepository errorRepository;
+    private final EmployeeProducer producer;
     @Autowired private ValidationService validationService;
 
-    public EmployeeService(EmployeeFileRepository repository) {
+    public EmployeeService(EmployeeFileRepository repository,
+                            EmployeeRawRepository rawRepository,
+                            EmployeeErrorRepository errorRepository,
+                                ValidationService validationService,
+                                EmployeeProducer producer) {
         this.repository = repository;
+        this.rawRepository = rawRepository;
+        this.errorRepository = errorRepository;
+        this.validationService = validationService;
+        this.producer = producer;
     }
 
     public EmployeeFile processFile(MultipartFile fileName) throws IOException {
@@ -51,9 +68,19 @@ public class EmployeeService {
             if (result.isValid()) {
                 validEmployees.add(employee);
                 System.out.println("Valid Employee: " + employee.getEmpId() + " " + employee.getName());
+                saveValidRecords(employee);
+                producer.publish(
+                    new EmployeeEvent(
+                        employee.getEmpId(),
+                        employee.getName(),
+                        employee.getSalary(),
+                        employee.getDepartment()
+                    )
+                );
             } else {
                 invalidEmployees.add(employee);
                 System.out.println("Invalid Employee: " + employee.getEmpId() + " - " + employee.getName() + " -> " + result.getReason());
+                saveInvalidRecrods(employee, result.getReason());
             }
         }
 
@@ -88,6 +115,31 @@ public class EmployeeService {
             employees.add(employee);
         }
         return employees;
+    }
+
+    private void saveValidRecords(EmployeeRecord employee) {
+
+        EmployeeRaw raw = new EmployeeRaw();
+        raw.setEmpId(employee.getEmpId());
+        raw.setName(employee.getName());
+        raw.setSalary(employee.getSalary());
+        raw.setDepartment(employee.getDepartment());
+        raw.setCreatedAt(LocalDateTime.now());
+        rawRepository.save(raw);
+
+    }
+
+    private void saveInvalidRecrods(EmployeeRecord employee, String reason) {
+
+        EmployeeError error = new EmployeeError();
+        error.setEmpId(employee.getEmpId());
+        error.setName(employee.getName());
+        error.setSalary(employee.getSalary());
+        error.setDepartment(employee.getDepartment());
+        error.setErrorReason(reason);
+        error.setCreatedAt(LocalDateTime.now());
+        errorRepository.save(error);
+
     }
     
 }
