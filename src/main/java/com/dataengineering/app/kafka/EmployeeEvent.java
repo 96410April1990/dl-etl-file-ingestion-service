@@ -2,6 +2,7 @@ package com.dataengineering.app.kafka;
 
 public class EmployeeEvent {
 
+    private String eventId;
     private Long empId;
     private String name;
     private Double salary;
@@ -10,16 +11,26 @@ public class EmployeeEvent {
     public EmployeeEvent() {}
 
     public EmployeeEvent(
+        String eventId,
         Long empId,
         String name,
         Double salary,
         String department) {
 
+            this.eventId = eventId;
             this.empId = empId;
             this.name = name;
             this.salary = salary;
             this.department = department;
 
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 
     public Long getEmpId() {

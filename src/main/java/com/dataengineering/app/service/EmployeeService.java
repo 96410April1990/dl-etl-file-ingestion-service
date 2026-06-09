@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -69,14 +70,13 @@ public class EmployeeService {
                 validEmployees.add(employee);
                 System.out.println("Valid Employee: " + employee.getEmpId() + " " + employee.getName());
                 saveValidRecords(employee);
-                producer.publish(
-                    new EmployeeEvent(
-                        employee.getEmpId(),
-                        employee.getName(),
-                        employee.getSalary(),
-                        employee.getDepartment()
-                    )
-                );
+                EmployeeEvent event = new EmployeeEvent();
+                event.setEventId(UUID.randomUUID().toString());
+                event.setEmpId(employee.getEmpId());
+                event.setName(employee.getName());
+                event.setSalary(employee.getSalary());
+                event.setDepartment(employee.getDepartment());
+                producer.publish(event);
             } else {
                 invalidEmployees.add(employee);
                 System.out.println("Invalid Employee: " + employee.getEmpId() + " - " + employee.getName() + " -> " + result.getReason());
